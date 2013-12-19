@@ -3,13 +3,16 @@ use 5.008005;
 use strict;
 use warnings;
 use parent qw/Test::Builder::Module/;
-use Compiler::Lexer;
+
+my @test_more_exports;
+BEGIN { @test_more_exports = (qw/done_testing/) }
+use PPI::Tokenizer;
 use ExtUtils::Manifest qw/maniread/;
-use Test::More ();
+use Test::More import => \@test_more_exports;
 use Test::Synopsis::Expectation::Pod;
 
-our $VERSION = "0.01";
-our @EXPORT  = qw/all_synopsis_ok synopsis_ok/;
+our $VERSION = "0.02";
+our @EXPORT  = (@test_more_exports, qw/all_synopsis_ok synopsis_ok/);
 
 my $prepared = '';
 
@@ -42,14 +45,28 @@ sub _synopsis_ok {
     my $parser = Test::Synopsis::Expectation::Pod->new;
     $parser->parse_file($file);
 
-    my $expectations = _analyze_expectations($parser->{target_code});
+    for my $target_code (@{$parser->{target_codes}}) {
+        my ($expectations, $code) = _analyze_target_code($target_code);
 
-    for my $expectation (@$expectations) {
-        _check($expectation);
+        _check_syntax($code);
+        for my $expectation (@$expectations) {
+            _check_with_expectation($expectation);
+        }
     }
 }
 
-sub _check {
+sub _check_syntax {
+    package Test::Synopsis::Expectation::Sandbox;
+    eval $_[0]; ## no critic
+    if ($@) {
+        Test::More::fail;
+    }
+    else {
+        Test::More::pass;
+    }
+}
+
+sub _check_with_expectation {
     package Test::Synopsis::Expectation::Sandbox;
 
     # $_[0] is expectation
@@ -68,30 +85,31 @@ sub _check {
     }
 }
 
-sub _analyze_expectations {
+sub _analyze_target_code {
     my ($target_code) = @_;
-
-    my $lexer = Compiler::Lexer->new({verbose => 1});
 
     my $deficient_brace = 0;
     my $code = $prepared || ''; # code for test
     my @expectations; # store expectations for test
-    foreach my $line (split /\n\r?/, $target_code) {
-        my $tokens = $lexer->tokenize($line);
-        next if (grep {$_->{name} eq 'ToDo'} @$tokens); # Ignore yada-yada operator
+    for my $line (split /\n\r?/, $target_code) {
+        my $tokens = PPI::Tokenizer->new(\$line)->all_tokens;
+
+        if (grep {$_->{content} eq '...' && $_->isa('PPI::Token::Operator')} @$tokens) {
+            next;
+        }
         $code .= "$line\n";
 
         # Count the number of left braces to complete deficient right braces
-        $deficient_brace++ if (grep {$_->{name} eq 'LeftBrace'}  @$tokens);
-        $deficient_brace-- if (grep {$_->{name} eq 'RightBrace'} @$tokens);
+        $deficient_brace++ if (grep {$_->{content} eq '{' && $_->isa('PPI::Token::Structure')}  @$tokens);
+        $deficient_brace-- if (grep {$_->{content} eq '}' && $_->isa('PPI::Token::Structure')}  @$tokens);
 
         # Extract comment statement
         # Tokens contain one comment token on a line, at the most
-        if (my ($comment) = grep {$_->{name} eq 'Comment'} @$tokens) {
+        if (my ($comment) = grep {$_->isa('PPI::Token::Comment')} @$tokens) {
             # Accept special comment for this module
             # e.g.
             #     # => is 42
-            my ($expectation) = $comment->{data} =~ /#\s*=>\s*(.+)/;
+            my ($expectation) = $comment->{content} =~ /#\s*=>\s*(.+)/;
             next unless $expectation;
 
             # Accept test methods as string
@@ -108,7 +126,7 @@ sub _analyze_expectations {
         }
     }
 
-    return \@expectations;
+    return (\@expectations, $code);
 }
 
 sub _list_up_files_from_manifest {
@@ -134,15 +152,15 @@ Test::Synopsis::Expectation - Test SYNOPSIS code with expectations
 =head1 SYNOPSIS
 
     use Test::Synopsis::Expectation;
-    use Test::More;
 
     synopsis_ok('path/to/target.pm');
     done_testing;
 
-    ### Following, SYNOPSIS of `target.pm`
-    my $sum;
-    $sum = 1; # => 1
-    ++$sum;   # => is 2
+Following, SYNOPSIS of `target.pm`
+
+    my $num;
+    $num = 1; # => 1
+    ++$num;   # => is 2
 
     use Foo::Bar;
     my $instance = Foo::Bar->new; # => isa 'Foo::Bar'
@@ -262,24 +280,45 @@ This carries out the same behavior as C<Test::More::is_deeply>.
 
 =back
 
-=head1 NOTES
+=head1 RESTRICTION
 
-This module ignores yada-yada operators that is in SYNOPSIS code.
-Thus, following code is valid.
+=head2 Test case must be one line
 
-    my $foo;
-    ...
-    $foo = 1; # => 1
+The following is valid;
 
-It cannot put test case in for(each) statement.
+    my $obj = {
+        foo => ["bar", "baz"],
+    }; # => is_deeply { foo => ["bar", "baz"] }
+
+However, the following is invalid;
+
+    my $obj = {
+        foo => ["bar", "baz"],
+    }; # => is_deeply {
+       #        foo => ["bar", "baz"]
+       #    }
+
+So test case must be one line.
+
+=head2 Not put test cases inside of for(each)
 
     # Example of not working
     for (1..10) {
         my $foo = $_; # => 10
     }
 
-This example doesn't work. On the contrary, it will be error.
-(Probably nobody uses such as this way... I think.)
+This example doesn't work. On the contrary, it will be error (Probably nobody uses such as this way... I think).
+
+=head1 NOTES
+
+=head2 yada-yada operator
+
+This module ignores yada-yada operators that is in SYNOPSIS code.
+Thus, following code is runnable.
+
+    my $foo;
+    ...
+    $foo = 1; # => 1
 
 =head1 LICENSE
 

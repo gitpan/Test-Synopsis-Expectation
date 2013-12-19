@@ -10,13 +10,15 @@ done_testing;
 __DATA__
 =head1 NAME
 
-yadayada - It's yadayada
+multi part synopsis - multi!
 
 =head1 SYNOPSIS
 
-    my $sum;
-    ...
-    $sum = 1; # => 1
+    1; # => 1
+
+Of course following is true!
+
+    2; # => 2
 
 =head1 AUTHOR
 

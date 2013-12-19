@@ -1,13 +1,12 @@
 =head1 NAME
 
-basic - It's basic
+sample - This is the sample POD
 
 =head1 SYNOPSIS
 
-    my $sum;
-    $sum = 1; # => 1
-    ++$sum;   # => is 2
-    ++$sum;   #=>is 3
+    my $num;
+    $num = 1; # => 1
+    ++$num;   # => is 2
 
     use Compiler::Lexer;
     my $lexer = Compiler::Lexer->new; # => isa 'Compiler::Lexer'

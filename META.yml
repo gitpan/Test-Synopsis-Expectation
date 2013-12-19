@@ -3,6 +3,7 @@ abstract: 'Test SYNOPSIS code with expectations'
 author:
   - 'moznion <moznion@gmail.com>'
 build_requires:
+  Test::Builder::Tester: 0
   Test::More: 0.98
 configure_requires:
   CPAN::Meta: 0
@@ -28,13 +29,13 @@ no_index:
 provides:
   Test::Synopsis::Expectation:
     file: lib/Test/Synopsis/Expectation.pm
-    version: 0.01
+    version: 0.02
   Test::Synopsis::Expectation::Pod:
     file: lib/Test/Synopsis/Expectation/Pod.pm
   Test::Synopsis::Expectation::Sandbox:
     file: lib/Test/Synopsis/Expectation.pm
 requires:
-  Compiler::Lexer: 0.17
+  PPI::Tokenizer: 0
   Pod::Simple::Methody: 0
   Test::Builder::Module: 0
   Test::More: 0.98
@@ -44,4 +45,4 @@ resources:
   bugtracker: https://github.com/moznion/Test-Synopsis-Expectation/issues
   homepage: https://github.com/moznion/Test-Synopsis-Expectation
   repository: git://github.com/moznion/Test-Synopsis-Expectation.git
-version: 0.01
+version: 0.02
