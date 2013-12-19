@@ -65,7 +65,7 @@
    "provides" : {
       "Test::Synopsis::Expectation" : {
          "file" : "lib/Test/Synopsis/Expectation.pm",
-         "version" : "0.02"
+         "version" : "0.03"
       },
       "Test::Synopsis::Expectation::Pod" : {
          "file" : "lib/Test/Synopsis/Expectation/Pod.pm"
@@ -85,5 +85,5 @@
          "web" : "https://github.com/moznion/Test-Synopsis-Expectation"
       }
    },
-   "version" : "0.02"
+   "version" : "0.03"
 }
