@@ -11,7 +11,7 @@ use ExtUtils::Manifest qw/maniread/;
 use Test::More import => \@test_more_exports;
 use Test::Synopsis::Expectation::Pod;
 
-our $VERSION = "0.03";
+our $VERSION = "0.04";
 our @EXPORT  = (@test_more_exports, qw/all_synopsis_ok synopsis_ok/);
 
 my $prepared = '';
@@ -45,13 +45,16 @@ sub _synopsis_ok {
     my $parser = Test::Synopsis::Expectation::Pod->new;
     $parser->parse_file($file);
 
+    my $block_num = 1;
     for my $target_code (@{$parser->{target_codes}}) {
         my ($expectations, $code) = _analyze_target_code($target_code);
 
-        _check_syntax($code);
+        _check_syntax($code, $block_num, $file);
         for my $expectation (@$expectations) {
-            _check_with_expectation($expectation);
+            _check_with_expectation($expectation, $block_num, $file);
         }
+
+        $block_num++;
     }
 }
 
@@ -59,10 +62,10 @@ sub _check_syntax {
     package Test::Synopsis::Expectation::Sandbox;
     eval $_[0]; ## no critic
     if ($@) {
-        Test::More::fail;
+        Test::More::fail("Syntax OK: $_[2] (SYNOPSIS Block: $_[1])");
     }
     else {
-        Test::More::pass;
+        Test::More::pass("Syntax OK: $_[2] (SYNOPSIS Block: $_[1])");
     }
 }
 
@@ -70,18 +73,19 @@ sub _check_with_expectation {
     package Test::Synopsis::Expectation::Sandbox;
 
     # $_[0] is expectation
-    my $got      = eval $_[0]->{code};     ## no critic
-    my $expected = eval $_[0]->{expected}; ## no critic
-    my $method   = $_[0]->{method};
+    my $got       = eval $_[0]->{code};     ## no critic
+    my $expected  = eval $_[0]->{expected}; ## no critic
+    my $method    = $_[0]->{method};
+    my $test_name = "$_[2] (SYNOPSIS Block: $_[1], Line: $_[0]->{line_num})";
 
     if ($method eq 'is') {
-        Test::More::is($got, $expected);
+        Test::More::is($got, $expected, $test_name);
     } elsif ($method eq 'isa') {
-        Test::More::isa_ok($got, $expected);
+        Test::More::isa_ok($got, $expected, $test_name);
     } elsif ($method eq 'like') {
-        Test::More::like($got, $expected);
+        Test::More::like($got, $expected, $test_name);
     } elsif ($method eq 'is_deeply') {
-        Test::More::is_deeply($got, $expected);
+        Test::More::is_deeply($got, $expected, $test_name);
     }
 }
 
@@ -91,6 +95,7 @@ sub _analyze_target_code {
     my $deficient_brace = 0;
     my $code = $prepared || ''; # code for test
     my @expectations; # store expectations for test
+    my $line_num = 1;
     for my $line (split /\n\r?/, $target_code) {
         my $tokens = PPI::Tokenizer->new(\$line)->all_tokens;
 
@@ -122,8 +127,11 @@ sub _analyze_target_code {
                 'method'   => $method || 'is',
                 'expected' => $expectation,
                 'code'     => $code . ('}' x $deficient_brace),
+                'line_num' => $line_num,
             };
         }
+
+        $line_num++;
     }
 
     return (\@expectations, $code);

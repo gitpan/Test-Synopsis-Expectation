@@ -29,7 +29,7 @@ no_index:
 provides:
   Test::Synopsis::Expectation:
     file: lib/Test/Synopsis/Expectation.pm
-    version: 0.03
+    version: 0.04
   Test::Synopsis::Expectation::Pod:
     file: lib/Test/Synopsis/Expectation/Pod.pm
   Test::Synopsis::Expectation::Sandbox:
@@ -45,4 +45,4 @@ resources:
   bugtracker: https://github.com/moznion/Test-Synopsis-Expectation/issues
   homepage: https://github.com/moznion/Test-Synopsis-Expectation
   repository: git://github.com/moznion/Test-Synopsis-Expectation.git
-version: 0.03
+version: 0.04
