@@ -11,13 +11,21 @@ use ExtUtils::Manifest qw/maniread/;
 use Test::More import => \@test_more_exports;
 use Test::Synopsis::Expectation::Pod;
 
-our $VERSION = "0.04";
+our $VERSION = "0.10";
 our @EXPORT  = (@test_more_exports, qw/all_synopsis_ok synopsis_ok/);
 
 my $prepared = '';
+my $ignorings = [];
 
 sub prepare {
     $prepared = shift;
+}
+
+sub set_ignorings {
+    $ignorings = shift;
+    $ignorings = [$ignorings] if ref $ignorings ne 'ARRAY';
+
+    return $ignorings;
 }
 
 sub all_synopsis_ok {
@@ -102,6 +110,11 @@ sub _analyze_target_code {
         if (grep {$_->{content} eq '...' && $_->isa('PPI::Token::Operator')} @$tokens) {
             next;
         }
+
+        for my $ignoring (@$ignorings) {
+            $line =~ s/\Q$ignoring\E//g;
+        }
+
         $code .= "$line\n";
 
         # Count the number of left braces to complete deficient right braces
@@ -161,17 +174,19 @@ Test::Synopsis::Expectation - Test SYNOPSIS code with expectations
 
     use Test::Synopsis::Expectation;
 
-    synopsis_ok('path/to/target.pm');
+    synopsis_ok('eg/sample.pod');
     done_testing;
 
-Following, SYNOPSIS of `target.pm`
+Following, SYNOPSIS of F<eg/sample.pod>
+
+=for test_synopsis_expectation_no_test
 
     my $num;
     $num = 1; # => 1
     ++$num;   # => is 2
 
-    use Foo::Bar;
-    my $instance = Foo::Bar->new; # => isa 'Foo::Bar'
+    use PPI::Tokenizer;
+    my $tokenizer = PPI::Tokenizer->new(\'code'); # => isa 'PPI::Tokenizer'
 
     my $str = 'Hello, I love you'; # => like qr/ove/
 
@@ -207,7 +222,6 @@ Register the executable codes to prepare for evaluation.
 If you use like;
 
     use Test::Synopsis::Expectation;
-    use Test::More;
     Test::Synopsis::Expectation::prepare('my $foo = 1;');
     synopsis_ok('path/to/target.pm');
     done_testing;
@@ -221,6 +235,25 @@ Then, SYNOPSIS of F<target.pm> is the same as;
     $foo; # => 1
 
 (This function is not exported)
+
+=item * set_ignorings
+
+Set the procedures which would like to ignore.
+
+    use Test::Synopsis::Expectation;
+    Test::Synopsis::Expectation::set_ignorings(['++$num;']);
+    synopsis_ok(*DATA);
+    done_testing;
+
+    __DATA__
+    =head1 SYNOPSIS
+
+        my $num;
+        $num = 1; # => 1
+        ++$num;
+        $num; # => 1
+
+In the above example, C<++$num;> will be ignored.
 
 =back
 
@@ -285,6 +318,26 @@ This way is equivalent to the next.
     is_deeply $obj, { foo => ["bar", "baz"] };
 
 This carries out the same behavior as C<Test::More::is_deeply>.
+
+=back
+
+=head1 ANNOTATIONS
+
+=over 4
+
+=item * =for test_synopsis_expectation_no_test
+
+The code block behind this annotation will not be tested.
+
+        my $sum;
+        $sum = 1; # => 1
+
+    =for test_synopsis_expectation_no_test
+
+        my $sum;
+        $sum = 1; # => 2
+
+In this example, the first code block will be tested, but the second will not.
 
 =back
 
