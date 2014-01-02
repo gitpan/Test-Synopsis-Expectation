@@ -11,7 +11,7 @@ use ExtUtils::Manifest qw/maniread/;
 use Test::More import => \@test_more_exports;
 use Test::Synopsis::Expectation::Pod;
 
-our $VERSION = "0.10";
+our $VERSION = "0.11";
 our @EXPORT  = (@test_more_exports, qw/all_synopsis_ok synopsis_ok/);
 
 my $prepared = '';
@@ -94,6 +94,8 @@ sub _check_with_expectation {
         Test::More::like($got, $expected, $test_name);
     } elsif ($method eq 'is_deeply') {
         Test::More::is_deeply($got, $expected, $test_name);
+    } elsif ($method eq 'success') {
+        Test::More::ok($got, $test_name);
     }
 }
 
@@ -132,8 +134,8 @@ sub _analyze_target_code {
 
             # Accept test methods as string
             my $method;
-            if ($expectation =~ s/^(is|isa|is_deeply|like)\s// && $1) {
-                $method = $1;
+            if ($expectation =~ s/^(?:(is|isa|is_deeply|like)\s|(success))//) {
+                $method = $1 || $2;
             }
 
             push @expectations, +{
@@ -193,6 +195,8 @@ Following, SYNOPSIS of F<eg/sample.pod>
     my $obj = {
         foo => ["bar", "baz"],
     }; # => is_deeply { foo => ["bar", "baz"] }
+
+    my $bool = 1; # => success
 
 =head1 DESCRIPTION
 
@@ -318,6 +322,14 @@ This way is equivalent to the next.
     is_deeply $obj, { foo => ["bar", "baz"] };
 
 This carries out the same behavior as C<Test::More::is_deeply>.
+
+=item * # => success
+
+    my $bool = 1;
+    $bool; # => success
+
+This way checks value as boolean.
+If target value of testing is 0 then this test will fail. Otherwise, it will pass.
 
 =back
 

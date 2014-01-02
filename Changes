@@ -1,5 +1,9 @@
 Revision history for Perl extension Test-Synopsis-Expectation
 
+0.11 2014-01-02T17:03:39Z
+
+    - Add `success` notation
+
 0.10 2013-12-31T08:25:12Z
 
     - Add notations to ignore testing
